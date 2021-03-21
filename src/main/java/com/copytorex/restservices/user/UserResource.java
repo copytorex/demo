@@ -14,18 +14,21 @@ import java.util.Optional;
 public class UserResource {
 
     private final UserRepository userRepository;
+    private final PostRepository postRepository;
 
-    public UserResource(UserRepository userRepository) {
+    public UserResource(UserRepository userRepository,
+                        PostRepository postRepository) {
         this.userRepository = userRepository;
+        this.postRepository = postRepository;
     }
 
     @GetMapping("")
-    public List<User> getAll() {
+    public List<User> getUsers() {
         return userRepository.findAll();
     }
 
     @GetMapping("/{id}")
-    public User getById(@PathVariable int id) {
+    public User getUserById(@PathVariable int id) {
         Optional<User> userOptional = userRepository.findById(id);
         if (userOptional.isPresent()) {
             return userOptional.get();
@@ -35,7 +38,7 @@ public class UserResource {
     }
 
     @DeleteMapping("/{id}")
-    public void delById(@PathVariable int id) {
+    public void delUserById(@PathVariable int id) {
         try {
             userRepository.deleteById(id);
         } catch (RuntimeException ex) {
@@ -45,10 +48,28 @@ public class UserResource {
 
     @PostMapping(value = "", produces = MediaType.APPLICATION_JSON_VALUE)
     @ResponseStatus(HttpStatus.CREATED)
-    public String add(@RequestBody User user) {
+    public String addUser(@RequestBody User user) {
         try {
-            User addedUser = userRepository.save(user);
-            return "{\"id\":" + addedUser.getId() + "}";
+            userRepository.save(user);
+            return "{\"User ID\":" + user.getId() + "}";
+        } catch (RuntimeException ex) {
+            throw new DuplicateResourceFoundException(ex.getClass().getName() + " - " + ex.getMessage());
+        }
+    }
+
+    @GetMapping("/{id}/posts")
+    public List<Post> getPosts(@PathVariable int id) {
+        return getUserById(id).getPosts();
+    }
+
+    @PostMapping(value = "/{id}/posts", produces = MediaType.APPLICATION_JSON_VALUE)
+    @ResponseStatus(HttpStatus.CREATED)
+    public String addPost(@PathVariable int id, @RequestBody Post post) {
+        try {
+            User user = getUserById(id);
+            post.setUser(user);
+            postRepository.save(post);
+            return "{\"Post ID\":" + post.getId() + "}";
         } catch (RuntimeException ex) {
             throw new DuplicateResourceFoundException(ex.getClass().getName() + " - " + ex.getMessage());
         }
